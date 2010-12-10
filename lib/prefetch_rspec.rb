@@ -18,10 +18,6 @@ module PrefetchRspec
       end
     end
 
-    def dwarn(str, col = 33)
-      color(str, col) if @options[:debug]
-    end
-
     def drb_uri
       drb_uri = "druby://127.0.0.1:#{options[:port] ||DEFAULT_PORT }"
     end
@@ -33,8 +29,6 @@ module PrefetchRspec
         case arg
         when /^--port=(\d+)$/
           @options[:port] = $1.to_i
-        when /^-D$/
-          @options[:debug] = true
         when /^--bundler$/
           @options[:bundler] = true
         when /^--drb$/
@@ -51,17 +45,21 @@ module PrefetchRspec
       self.new(args).run ? exit(0) : exit(1)
     end
 
-    def run
-      drb_service = DRb.start_service(nil)
+    def run(err = STDERR, out = STDOUT)
+      @drb_service ||= DRb.start_service(nil)
+
+      result = nil
       begin
-        DRbObject.new_with_uri(drb_uri).run(options[:args], $stderr, $stdout)
+        result = DRbObject.new_with_uri(drb_uri).run(options[:args], err, out)
+        @drb_service.stop_service
       rescue DRb::DRbConnError => e
-        drb_service.stop_service
-        warn "Can't connect to prspecd. Running in normal rspec."
+        @drb_service.stop_service
+        err.puts "Can't connect to prspecd. Run in normal rspec."
         require_libraries
         RSpec::Core::Runner.disable_autorun!
-        RSpec::Core::Runner.run(options[:args], $stderr, $stdout)
+        result = RSpec::Core::Runner.run(options[:args], err, out)
       end
+      result
     end
 
     def require_libraries
@@ -77,6 +75,8 @@ module PrefetchRspec
   end
 
   class Server < Base
+    require 'stringio'
+
     def self.listen(args, script)
       begin
         server = self.new(args)
@@ -90,17 +90,30 @@ module PrefetchRspec
       end
     end
 
+    @@force_exit = false
     def self.register_handlers(server, args, script)
-      force_exit = false
-      [:INT, :TERM, :KILL].each do |signal|
+      [:TERM, :KILL].each do |signal|
         Signal.trap(signal) {
-          force_exit = true
-          exit 1
+          force_exit!
         }
       end
+      
+      sigint_first_called = false
+      Signal.trap(:INT) {
+        if sigint_first_called
+          force_exit!
+        else
+          sigint_first_called = true
+          warn " reloding... [Ctrl-C quick press shoudown]"
+          Thread.new { 
+            sleep 1.5
+            exit
+          }
+        end
+      }
 
       at_exit {
-        if force_exit
+        if @@force_exit
           server.color("shutdown")
         else
           server.color("self reload: " + [script, args.to_a].flatten.join(' '))
@@ -109,21 +122,33 @@ module PrefetchRspec
       }
     end
 
-    def initialize(args)
-      super
-      load_config_prspecd
+    def self.force_exit!
+      @@force_exit = true
+      exit 1
     end
 
     def run(options, err, out)
-      before_run!
+      while !@prefetched
+        sleep 0.1
+      end
+      if @prefetch_out
+        @prefetch_out.rewind
+        out.print @prefetch_out.read
+      end
+      if @prefetch_err
+        @prefetch_err.rewind
+        err.print @prefetch_err.read
+      end
+
+      call_before_run(err, out)
       RSpec::Core::Runner.disable_autorun!
-      @result = RSpec::Core::Runner.run(options, err, out)
-      after_run!
+      result = replace_io_execute(err, out) { RSpec::Core::Runner.run(options, err, out) }
+      call_after_run(err, out)
       Thread.new { 
         sleep 0.01
         stop_service!
       }
-      @result
+      result
     end
 
     def stop_service!
@@ -146,31 +171,53 @@ module PrefetchRspec
       @after_run = block
     end
 
-    def call(ival_name)
-      ival = self.instance_variable_get("@#{ival_name}")
-      if ival
-        now = Time.now.to_f
-        dwarn("#{ival_name}: start")
-        case ival_name
-        when 'after_run'
-          ival.call(@result)
-        else
-          ival.call
+    def timewatch(name)
+      now = Time.now.to_f
+      color("#{name}: start", 35)
+      yield
+      color("#{name}: finished (%.3f sec)" % (Time.now.to_f - now), 35)
+    end
+
+    def call_prefetch
+      if @prefetch
+        timewatch('prefetch') do
+          @prefetch_err = StringIO.new
+          @prefetch_out = StringIO.new
+          replace_io_execute(@prefetch_err, @prefetch_out) {
+            @prefetch.call
+          }
         end
-        dwarn("#{ival_name}: finished (%s sec)" % (Time.now.to_f - now))
+      end
+      @prefetched = true
+    end
+
+    def replace_io_execute(err, out)
+      orig_out = $stdout
+      orig_err = $stderr
+      begin
+        $stdout = out
+        $stderr = err
+        yield
+      ensure
+        $stdout = orig_out
+        $stderr = orig_err
       end
     end
 
-    def prefetch!
-      call("prefetch")
+    def call_before_run(err, out)
+      if @before_run
+        timewatch('before_run') do
+          replace_io_execute(err, out) { @before_run.call }
+        end
+      end
     end
 
-    def before_run!
-      call("before_run")
-    end
-
-    def after_run!
-      call("after_run")
+    def call_after_run(err, out)
+      if @after_run
+        timewatch('after_run') do
+          replace_io_execute(err, out) { @after_run.call }
+        end
+      end
     end
 
     def load_config_prspecd
@@ -178,22 +225,23 @@ module PrefetchRspec
       dot_prspecd = Pathname.new(Dir.pwd).join('.prspecd')
       if dot_prspecd.exist?
         self.instance_eval dot_prspecd.read, dot_prspecd.to_s
-        dwarn("load .prspecd")
+        color("load .prspecd")
       else
-        dwarn(".prspecd not found", 31)
+        color(".prspecd not found", 31)
       end
     end
 
     def listen
-      prefetch!
+      load_config_prspecd
       begin
         @drb_service = DRb.start_service(drb_uri, self)
-        @drb_service.thread.join
       rescue DRb::DRbConnError => e
         color("client connection abort", 31)
         @drb_service.stop_service
         exit 1
       end
+      call_prefetch
+      @drb_service.thread.join
     end
   end
 end

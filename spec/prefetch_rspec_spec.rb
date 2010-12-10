@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
+require 'stringio'
 
 describe PrefetchRspec do
   describe PrefetchRspec::Base do
@@ -8,7 +9,6 @@ describe PrefetchRspec do
         options[:args].should be_empty
         options[:port].should be_nil
         options[:bundler].should be_nil
-        options[:debug].should be_nil
       end
 
       it "port assign" do
@@ -20,20 +20,6 @@ describe PrefetchRspec do
         base.drb_uri.should == "druby://127.0.0.1:#{PrefetchRspec::DEFAULT_PORT}"
         base = PrefetchRspec::Base.new(['--port=10001', 'a'])
         base.drb_uri.should == "druby://127.0.0.1:10001"
-      end
-
-      it "debug option" do
-        base = PrefetchRspec::Base.new(['-D', 'a'])
-        base.options[:debug].should be_true
-        base.should_receive(:warn)
-        base.dwarn('a')
-      end
-
-      it "debug option false" do
-        base = PrefetchRspec::Base.new(['a'])
-        base.options[:debug].should be_false
-        base.should_not_receive(:warn)
-        base.dwarn('a')
       end
 
       it "remove --drb options" do
@@ -48,8 +34,8 @@ describe PrefetchRspec do
     end
   end
 
-  describe PrefetchRspec, :focus => true do
-    around(:each) do
+  describe PrefetchRspec do
+    before(:each) do
       RSpec::Mocks::setup(RSpec::Core::Runner)
       RSpec::Core::Runner.stub!(:run).and_return {|args, err, out| 
         if args.first.kind_of? Proc
@@ -60,19 +46,24 @@ describe PrefetchRspec do
       }
     end
 
-    after (:each) do
+    after(:each) do
+      sleep 0.001 # wait thread
       @server.stop_service! if @server 
     end
 
     def server(args = [])
-      @server ||= PrefetchRspec::Server.new(args)
+      unless @server 
+        @server = PrefetchRspec::Server.new(args)
+        @server.stub(:color)
+      end
+      @server
     end
 
     def listen
       Thread.new { server.listen }
     end
 
-    def runner(args = [], &block)
+    def runner(*args, &block)
       PrefetchRspec::Runner.new([args, block].flatten)
     end
 
@@ -80,38 +71,50 @@ describe PrefetchRspec do
       runner(args, &block).run
     end
 
+    def err_io
+      @err_io ||= StringIO.new
+    end
+
+    def out_io
+      @out_io ||= StringIO.new
+    end
+
     describe PrefetchRspec::Runner do
       it "running over drb" do
         listen
         r = runner(false)
-        r.should_not_receive(:warn).with(/Can't connect to prspecd/)
-        r.run.should be_false
+        r.run(err_io).should be_false
+        err_io.rewind
+        err_io.read.should_not match(/Can't connect to prspecd/)
       end
 
       it "running over drb 2nd" do
         listen
         r = runner(false)
-        r.should_not_receive(:warn).with(/Can't connect to prspecd/)
-        r.run.should be_false
+        r.run(err_io).should be_false
+        err_io.rewind
+        err_io.read.should_not match(/Can't connect to prspecd/)
       end
 
       it "not running over drb" do
         r = runner(false)
-        r.should_receive(:warn).with(/Can't connect to prspecd/)
-        r.run.should be_false
+        r.run(err_io).should be_false
+        err_io.rewind
+        err_io.read.should match(/Can't connect to prspecd/)
       end
 
       it "not running over drb 2nd" do
         r = runner(false)
-        r.should_receive(:warn).with(/Can't connect to prspecd/)
-        r.run.should be_false
+        r.run(err_io).should be_false
+        err_io.rewind
+        err_io.read.should match(/Can't connect to prspecd/)
       end
     end
 
     describe PrefetchRspec::Server do
       it "listen" do
         listen
-        sleep 0.01 # wait thread
+        sleep 0.001 # wait thread
         server.stop_service!.should be_true
       end
 
@@ -141,8 +144,46 @@ describe PrefetchRspec do
           hooks.after_run if @after_run
         }
         listen
-        run { @after_run_run = false ; true}.should be_true
+        sleep 0.001 # wait thread
+        r = runner { @after_run_run = false ; true}
+        r.run(err_io).should be_true
+        err_io.rewind
+        err_io.read.should_not match(/Can't connect to prspecd/)
       end
+
+      it "wait prefetch" do
+        hooks = double('hooks')
+        hooks.should_receive('prefetch')
+        hooks.should_receive('before_run')
+        hooks.should_not_receive('after_run')
+        server.prefetch { sleep 0.2 ;hooks.prefetch }
+        server.before_run { hooks.before_run }
+        @after_run_run = true
+        server.after_run { 
+          hooks.after_run if @after_run
+        }
+        listen
+        sleep 0.02 # wait thread
+        r = runner { @after_run_run = false ; true}
+        r.run(err_io).should be_true
+        err_io.rewind
+        err_io.read.should_not match(/Can't connect to prspecd/)
+      end
+
+      it "get hooks output" do
+        server.prefetch { print '1'; $stderr.print '4' }
+        server.before_run { print '2'; $stderr.print '5' }
+        server.after_run { print '3'; $stderr.print '6' }
+        listen
+        sleep 0.001 # wait thread
+        r = runner { true }
+        r.run(err_io, out_io).should be_true
+        out_io.rewind
+        out_io.read.should match(/123/)
+        err_io.rewind
+        err_io.read.should match(/456/)
+      end
+
     end
   end
 end
