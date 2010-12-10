@@ -29,6 +29,8 @@ module PrefetchRspec
         case arg
         when /^--port=(\d+)$/
           @options[:port] = $1.to_i
+        when /^--rails$/
+          @options[:rails] = true
         when /^--bundler$/
           @options[:bundler] = true
         when /^--drb$/
@@ -221,18 +223,37 @@ module PrefetchRspec
     end
 
     def load_config_prspecd
-      require 'pathname'
       dot_prspecd = Pathname.new(Dir.pwd).join('.prspecd')
       if dot_prspecd.exist?
         self.instance_eval dot_prspecd.read, dot_prspecd.to_s
-        color("load .prspecd")
       else
-        color(".prspecd not found", 31)
+      end
+    end
+
+    def load_config(path)
+      if path.exist?
+        self.instance_eval path.read, path.to_s
+        color("#{path} loaded")
+      else
+        color("#{path} not found", 31)
+        self.class.force_exit!
+      end
+    end
+
+    def detect_load_config
+      require 'pathname'
+      if options[:rails]
+        load_config Pathname.new(File.expand_path(__FILE__)).parent.parent.join('examples/rails.prspecd')
+      elsif options[:args].first
+        load_config Pathname.new(Dir.pwd).join(args.first)
+      else
+        load_config(Pathname.new(Dir.pwd).join('.prspecd'))
       end
     end
 
     def listen
-      load_config_prspecd
+      detect_load_config
+
       begin
         @drb_service = DRb.start_service(drb_uri, self)
       rescue DRb::DRbConnError => e

@@ -7,6 +7,7 @@ describe PrefetchRspec do
       it "default" do
         options = PrefetchRspec::Base.new([]).options
         options[:args].should be_empty
+        options[:rails].should be_nil
         options[:port].should be_nil
         options[:bundler].should be_nil
       end
@@ -30,6 +31,11 @@ describe PrefetchRspec do
       it "bundler option" do
         base = PrefetchRspec::Base.new(['--bundler', 'a'])
         base.options[:bundler].should be_true
+      end
+
+      it "rails option" do
+        base = PrefetchRspec::Base.new(['--rails', 'a'])
+        base.options[:rails].should be_true
       end
     end
   end
@@ -55,6 +61,7 @@ describe PrefetchRspec do
       unless @server 
         @server = PrefetchRspec::Server.new(args)
         @server.stub(:color)
+        @server.stub(:detect_load_config)
       end
       @server
     end

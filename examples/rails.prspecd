@@ -1,0 +1,31 @@
+
+prefetch {
+  require 'pathname'
+  ENV["PRSPEC"] = 'true'
+  ENV["RAILS_ENV"] ||= 'test'
+  envfile = Pathname.new(File.expand_path(Dir.pwd + "/config/environments/#{ENV["RAILS_ENV"]}.rb"))
+  unless envfile.read.match(/ENV.+PRSPEC/)
+    color("!!! set cache_classes (for reload classes) !!!", 31)
+    warn "Please replace #{envfile} settings."
+    mes = "  config.cache_classes = ENV.has_key?('PRSPEC') ? false : true  "
+    warn '-' * mes.length
+    warn mes
+    warn '-' * mes.length
+  end
+  require File.expand_path(Dir.pwd + "/config/environment")
+  Rails.application.config.cache_classes = false
+  require 'rspec/rails'
+}
+
+before_run {
+  ActionDispatch::Callbacks.new(Proc.new {}, false).call({})
+  ActiveSupport::DescendantsTracker.clear
+  ActiveSupport::Dependencies.clear
+  Rails.application.config.cache_classes = true
+  ActiveSupport::Dependencies.mechanism = :require
+  require 'spec/spec_helper'
+}
+
+# after_run {
+# }
+
