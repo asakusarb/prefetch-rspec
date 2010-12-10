@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+
+require 'prefetch_rspec'
+PrefetchRspec::Server.listen(ARGV, File.expand_path($0))

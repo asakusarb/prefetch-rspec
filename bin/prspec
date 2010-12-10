@@ -2,3 +2,4 @@
 
 require 'prefetch_rspec'
 PrefetchRspec::Runner.run(ARGV)
+
