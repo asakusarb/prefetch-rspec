@@ -101,9 +101,9 @@ module PrefetchRspec
 
       at_exit {
         if force_exit
-          server.dwarn("shutdown")
+          server.color("shutdown")
         else
-          server.dwarn("self reload: " + [script, args.to_a].flatten.join(' '))
+          server.color("self reload: " + [script, args.to_a].flatten.join(' '))
           exec(script, *args.to_a)
         end
       }
@@ -116,18 +116,22 @@ module PrefetchRspec
 
     def run(options, err, out)
       before_run!
-    end
-
-    def run(options, err, out)
-      before_run!
       RSpec::Core::Runner.disable_autorun!
       @result = RSpec::Core::Runner.run(options, err, out)
       after_run!
       Thread.new { 
         sleep 0.01
-        @drb_service.stop_service
+        stop_service!
       }
       @result
+    end
+
+    def stop_service!
+      if @drb_service
+        @drb_service.stop_service
+      else
+        false
+      end
     end
 
     def prefetch(&block)
