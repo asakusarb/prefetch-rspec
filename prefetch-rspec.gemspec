@@ -5,12 +5,12 @@
 
 Gem::Specification.new do |s|
   s.name = %q{prefetch-rspec}
-  s.version = "0.1.0"
+  s.version = "0.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Yuichi Tateno"]
   s.date = %q{2010-12-11}
-  s.description = %q{TODO: longer description of your gem}
+  s.description = %q{ }
   s.email = %q{hotchpotch@gmail.com}
   s.executables = ["prspecd", "prspec"]
   s.extra_rdoc_files = [
@@ -21,6 +21,7 @@ Gem::Specification.new do |s|
     ".document",
     ".rspec",
     "Gemfile",
+    "Gemfile.lock",
     "LICENSE.txt",
     "README.rdoc",
     "Rakefile",
@@ -29,6 +30,7 @@ Gem::Specification.new do |s|
     "bin/prspecd",
     "examples/rails.prspecd",
     "lib/prefetch_rspec.rb",
+    "prefetch-rspec.gemspec",
     "spec/prefetch_rspec_spec.rb",
     "spec/spec_helper.rb",
     "specs.watchr"
@@ -37,7 +39,7 @@ Gem::Specification.new do |s|
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.3.7}
-  s.summary = %q{TODO: one-line summary of your gem}
+  s.summary = %q{Prefetch initialize phase before run rspec}
   s.test_files = [
     "spec/prefetch_rspec_spec.rb",
     "spec/spec_helper.rb"
@@ -53,12 +55,14 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<bundler>, ["~> 1.0.0"])
       s.add_development_dependency(%q<jeweler>, ["~> 1.5.1"])
       s.add_development_dependency(%q<rcov>, [">= 0"])
+      s.add_runtime_dependency(%q<rspec>, ["~> 2.0.0"])
     else
       s.add_dependency(%q<rspec>, ["~> 2.0.0"])
       s.add_dependency(%q<yard>, ["~> 0.6.0"])
       s.add_dependency(%q<bundler>, ["~> 1.0.0"])
       s.add_dependency(%q<jeweler>, ["~> 1.5.1"])
       s.add_dependency(%q<rcov>, [">= 0"])
+      s.add_dependency(%q<rspec>, ["~> 2.0.0"])
     end
   else
     s.add_dependency(%q<rspec>, ["~> 2.0.0"])
@@ -66,6 +70,7 @@ Gem::Specification.new do |s|
     s.add_dependency(%q<bundler>, ["~> 1.0.0"])
     s.add_dependency(%q<jeweler>, ["~> 1.5.1"])
     s.add_dependency(%q<rcov>, [">= 0"])
+    s.add_dependency(%q<rspec>, ["~> 2.0.0"])
   end
 end
 

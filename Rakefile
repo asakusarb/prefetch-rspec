@@ -15,14 +15,16 @@ Jeweler::Tasks.new do |gem|
   gem.name = "prefetch-rspec"
   gem.homepage = "http://github.com/hotchpotch/prefetch-rspec"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = %Q{Prefetch initialize phase before run rspec}
+  gem.description = %Q{ }
   gem.email = "hotchpotch@gmail.com"
   gem.authors = ["Yuichi Tateno"]
   # Include your dependencies below. Runtime dependencies are required when using your gem,
   # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
   #  gem.add_runtime_dependency 'jabber4r', '> 0.1'
   #  gem.add_development_dependency 'rspec', '> 1.2.3'
+  gem.add_runtime_dependency "rspec", "~> 2.0.0"
+  gem.executables == `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
 end
 Jeweler::RubygemsDotOrgTasks.new
 
