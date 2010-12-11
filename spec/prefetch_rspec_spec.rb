@@ -60,7 +60,7 @@ describe PrefetchRspec do
     def server(args = [])
       unless @server 
         @server = PrefetchRspec::Server.new(args)
-        @server.stub(:color)
+        @server.stub(:cwarn)
         @server.stub(:detect_load_config)
       end
       @server
@@ -68,6 +68,7 @@ describe PrefetchRspec do
 
     def listen
       Thread.new { server.listen }
+      sleep 0.001
     end
 
     def runner(*args, &block)
@@ -121,7 +122,6 @@ describe PrefetchRspec do
     describe PrefetchRspec::Server do
       it "listen" do
         listen
-        sleep 0.001 # wait thread
         server.stop_service!.should be_true
       end
 
@@ -151,7 +151,6 @@ describe PrefetchRspec do
           hooks.after_run if @after_run
         }
         listen
-        sleep 0.001 # wait thread
         r = runner { @after_run_run = false ; true}
         r.run(err_io).should be_true
         err_io.rewind
@@ -170,7 +169,6 @@ describe PrefetchRspec do
           hooks.after_run if @after_run
         }
         listen
-        sleep 0.02 # wait thread
         r = runner { @after_run_run = false ; true}
         r.run(err_io).should be_true
         err_io.rewind
@@ -182,7 +180,6 @@ describe PrefetchRspec do
         server.before_run { print '2'; $stderr.print '5' }
         server.after_run { print '3'; $stderr.print '6' }
         listen
-        sleep 0.001 # wait thread
         r = runner { true }
         r.run(err_io, out_io).should be_true
         out_io.rewind
@@ -191,6 +188,32 @@ describe PrefetchRspec do
         err_io.read.should match(/456/)
       end
 
+      it "prefetch raise error catch" do
+        server.prefetch { raise Exception.new('MyErrorOOO') }
+        listen
+        r = runner { true }
+        r.run(err_io, out_io).should be_true
+        err_io.rewind
+        err_io.read.should match(/MyErrorOOO/)
+      end
+
+      it "before_run raise error catch" do
+        server.before_run { raise Exception.new('MyErrorOOO') }
+        listen
+        r = runner { true }
+        r.run(err_io, out_io).should be_true
+        err_io.rewind
+        err_io.read.should match(/MyErrorOOO/)
+      end
+
+      it "after_run raise error catch" do
+        server.after_run { raise Exception.new('MyErrorOOO') }
+        listen
+        r = runner { true }
+        r.run(err_io, out_io).should be_true
+        err_io.rewind
+        err_io.read.should match(/MyErrorOOO/)
+      end
     end
   end
 end

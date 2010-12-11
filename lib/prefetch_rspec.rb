@@ -10,16 +10,20 @@ module PrefetchRspec
       optparse(args.to_a)
     end
 
-    def color(str, col = 33)
+    def cwarn(str, col = 37)
+      warn color(str, col)
+    end
+
+    def color(str, col = 37)
       if STDOUT.tty?
-        warn "\033[1;#{col}m%s\033[0m" % str
+        "\033[1;#{col}m%s\033[0m" % str
       else
-        warn str
+        str
       end
     end
 
     def drb_uri
-      drb_uri = "druby://127.0.0.1:#{options[:port] ||DEFAULT_PORT }"
+      drb_uri = "druby://127.0.0.1:#{options[:port] || DEFAULT_PORT }"
     end
 
     private
@@ -116,9 +120,10 @@ module PrefetchRspec
 
       at_exit {
         if @@force_exit
-          server.color("shutdown")
+          server.cwarn("shutdown: ...")
         else
-          server.color("self reload: " + [script, args.to_a].flatten.join(' '))
+          server.cwarn("")
+          server.cwarn("self restart: " + [script, args.to_a].flatten.join(' '))
           exec(script, *args.to_a)
         end
       }
@@ -144,7 +149,7 @@ module PrefetchRspec
 
       call_before_run(err, out)
       RSpec::Core::Runner.disable_autorun!
-      result = replace_io_execute(err, out) { RSpec::Core::Runner.run(options, err, out) }
+      result = replace_io_execute(err, out, nil) { RSpec::Core::Runner.run(options, err, out) }
       call_after_run(err, out)
       Thread.new { 
         sleep 0.01
@@ -175,9 +180,9 @@ module PrefetchRspec
 
     def timewatch(name)
       now = Time.now.to_f
-      color("#{name}: start", 35)
+      cwarn("#{name}: start", 35)
       yield
-      color("#{name}: finished (%.3f sec)" % (Time.now.to_f - now), 35)
+      cwarn("#{name}: finished (%.3f sec)" % (Time.now.to_f - now), 35)
     end
 
     def call_prefetch
@@ -185,31 +190,39 @@ module PrefetchRspec
         timewatch('prefetch') do
           @prefetch_err = StringIO.new
           @prefetch_out = StringIO.new
-          replace_io_execute(@prefetch_err, @prefetch_out) {
-            @prefetch.call
-          }
+            replace_io_execute(@prefetch_err, @prefetch_out, 'prefetch') {
+              @prefetch.call
+            }
+          @prefetch_err.rewind
         end
       end
       @prefetched = true
     end
 
-    def replace_io_execute(err, out)
+    def replace_io_execute(err, out, catch_fail)
       orig_out = $stdout
       orig_err = $stderr
+      result = nil
       begin
         $stdout = out
         $stderr = err
-        yield
+        result = yield
+      rescue Exception => exception
+        if catch_fail
+          err.puts color("hook #{catch_fail} raise error: #{exception}", 31)
+          err.puts color(exception.backtrace.map {|l| "  " + l}.join("\n"), 37)
+        end
       ensure
         $stdout = orig_out
         $stderr = orig_err
       end
+      result
     end
 
     def call_before_run(err, out)
       if @before_run
         timewatch('before_run') do
-          replace_io_execute(err, out) { @before_run.call }
+          replace_io_execute(err, out, 'before_run') { @before_run.call }
         end
       end
     end
@@ -217,7 +230,7 @@ module PrefetchRspec
     def call_after_run(err, out)
       if @after_run
         timewatch('after_run') do
-          replace_io_execute(err, out) { @after_run.call }
+          replace_io_execute(err, out, 'after_run') { @after_run.call }
         end
       end
     end
@@ -233,11 +246,16 @@ module PrefetchRspec
     def load_config(path)
       if path.exist?
         self.instance_eval path.read, path.to_s
-        color("#{path} loaded")
+        cwarn("config loaded: #{path}", 37)
       else
-        color("#{path} not found", 31)
+        cwarn("config not found:#{path}", 31)
+        banner
         self.class.force_exit!
       end
+    end
+
+    def banner
+      cwarn "usage: #{File.basename($0)} [--rails] [config_file(default .prspecd)]"
     end
 
     def detect_load_config
@@ -245,7 +263,7 @@ module PrefetchRspec
       if options[:rails]
         load_config Pathname.new(File.expand_path(__FILE__)).parent.parent.join('examples/rails.prspecd')
       elsif options[:args].first
-        load_config Pathname.new(Dir.pwd).join(args.first)
+        load_config Pathname.new(Dir.pwd).join(options[:args].first)
       else
         load_config(Pathname.new(Dir.pwd).join('.prspecd'))
       end
@@ -257,7 +275,7 @@ module PrefetchRspec
       begin
         @drb_service = DRb.start_service(drb_uri, self)
       rescue DRb::DRbConnError => e
-        color("client connection abort", 31)
+        cwarn("client connection abort", 31)
         @drb_service.stop_service
         exit 1
       end
