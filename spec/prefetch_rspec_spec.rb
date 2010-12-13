@@ -157,6 +157,20 @@ describe PrefetchRspec do
         err_io.read.should_not match(/Can't connect to prspecd/)
       end
 
+      it "set ENV['PRSPEC']" do
+        hooks = double('hooks')
+        hooks.should_receive('prefetch')
+        hooks.should_receive('before_run')
+        hooks.should_receive('after_run')
+        server.prefetch { hooks.prefetch if ENV['PRSPEC'] }
+        server.before_run { hooks.before_run if ENV['PRSPEC'] }
+        server.after_run { hooks.after_run if ENV['PRSPEC'] }
+        listen
+        r = runner { ENV.has_key? 'PRSPEC' }
+        r.run.should be_true
+        sleep 0.1
+      end
+
       it "wait prefetch" do
         hooks = double('hooks')
         hooks.should_receive('prefetch')

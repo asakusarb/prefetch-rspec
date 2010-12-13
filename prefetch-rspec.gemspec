@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{prefetch-rspec}
-  s.version = "0.1.1"
+  s.version = "0.1.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Yuichi Tateno"]
-  s.date = %q{2010-12-11}
+  s.date = %q{2010-12-13}
   s.description = %q{ }
   s.email = %q{hotchpotch@gmail.com}
   s.executables = ["prspecd", "prspec"]

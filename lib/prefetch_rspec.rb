@@ -270,6 +270,7 @@ module PrefetchRspec
     end
 
     def listen
+      ENV['PRSPEC'] = 'true'
       detect_load_config
 
       begin
