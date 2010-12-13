@@ -19,13 +19,11 @@ prefetch {
 
 before_run {
   ActionDispatch::Callbacks.new(Proc.new {}, false).call({})
-  ActiveSupport::DescendantsTracker.clear
-  ActiveSupport::Dependencies.clear
   Rails.application.config.cache_classes = true
   ActiveSupport::Dependencies.mechanism = :require
   require 'spec/spec_helper'
 }
 
-# after_run {
-# }
-
+after_run {
+  ActiveRecord::Base.connection_pool.disconnect!
+}
