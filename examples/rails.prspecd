@@ -21,7 +21,7 @@ before_run {
   ActionDispatch::Callbacks.new(Proc.new {}, false).call({})
   Rails.application.config.cache_classes = true
   ActiveSupport::Dependencies.mechanism = :require
-  require 'spec/spec_helper'
+  require Rails.root + 'spec/spec_helper'
 }
 
 after_run {
