@@ -9,10 +9,10 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Yuichi Tateno"]
-  s.date = %q{2010-12-13}
+  s.date = %q{2011-04-11}
   s.description = %q{ }
   s.email = %q{hotchpotch@gmail.com}
-  s.executables = ["prspecd", "prspec"]
+  s.executables = ["prspec", "prspecd"]
   s.extra_rdoc_files = [
     "LICENSE.txt",
     "README.rdoc"
@@ -38,7 +38,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://github.com/hotchpotch/prefetch-rspec}
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
+  s.rubygems_version = %q{1.5.0}
   s.summary = %q{Prefetch initialize phase before run rspec}
   s.test_files = [
     "spec/prefetch_rspec_spec.rb",
@@ -46,31 +46,30 @@ Gem::Specification.new do |s|
   ]
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
-      s.add_development_dependency(%q<rspec>, ["~> 2.0.0"])
+      s.add_development_dependency(%q<rspec>, ["~> 2.5.0"])
       s.add_development_dependency(%q<yard>, ["~> 0.6.0"])
       s.add_development_dependency(%q<bundler>, ["~> 1.0.0"])
       s.add_development_dependency(%q<jeweler>, ["~> 1.5.1"])
       s.add_development_dependency(%q<rcov>, [">= 0"])
-      s.add_runtime_dependency(%q<rspec>, ["~> 2.0.0"])
+      s.add_runtime_dependency(%q<rspec>, ["~> 2.0"])
     else
-      s.add_dependency(%q<rspec>, ["~> 2.0.0"])
+      s.add_dependency(%q<rspec>, ["~> 2.5.0"])
       s.add_dependency(%q<yard>, ["~> 0.6.0"])
       s.add_dependency(%q<bundler>, ["~> 1.0.0"])
       s.add_dependency(%q<jeweler>, ["~> 1.5.1"])
       s.add_dependency(%q<rcov>, [">= 0"])
-      s.add_dependency(%q<rspec>, ["~> 2.0.0"])
+      s.add_dependency(%q<rspec>, ["~> 2.0"])
     end
   else
-    s.add_dependency(%q<rspec>, ["~> 2.0.0"])
+    s.add_dependency(%q<rspec>, ["~> 2.5.0"])
     s.add_dependency(%q<yard>, ["~> 0.6.0"])
     s.add_dependency(%q<bundler>, ["~> 1.0.0"])
     s.add_dependency(%q<jeweler>, ["~> 1.5.1"])
     s.add_dependency(%q<rcov>, [">= 0"])
-    s.add_dependency(%q<rspec>, ["~> 2.0.0"])
+    s.add_dependency(%q<rspec>, ["~> 2.0"])
   end
 end
 
