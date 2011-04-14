@@ -13,7 +13,7 @@ require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "prefetch-rspec"
-  gem.homepage = "http://github.com/hotchpotch/prefetch-rspec"
+  gem.homepage = "http://github.com/asakusarb/prefetch-rspec"
   gem.license = "MIT"
   gem.summary = %Q{Prefetch initialize phase before run rspec}
   gem.description = %Q{ }
@@ -23,7 +23,7 @@ Jeweler::Tasks.new do |gem|
   # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
   #  gem.add_runtime_dependency 'jabber4r', '> 0.1'
   #  gem.add_development_dependency 'rspec', '> 1.2.3'
-  gem.add_runtime_dependency "rspec", "~> 2.0"
+  gem.add_runtime_dependency "rspec", "> 2.0.0"
   gem.executables == `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
 end
 Jeweler::RubygemsDotOrgTasks.new
@@ -31,6 +31,10 @@ Jeweler::RubygemsDotOrgTasks.new
 require 'rspec/core'
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec) do |spec|
+  spec.pattern = FileList['spec/**/*_spec.rb']
+end
+
+RSpec::Core::RakeTask.new(:test) do |spec|
   spec.pattern = FileList['spec/**/*_spec.rb']
 end
 
