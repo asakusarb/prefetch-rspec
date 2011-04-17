@@ -55,18 +55,15 @@ module PrefetchRspec
       exit 1
     end
 
+    def initialize(*args)
+      super
+      @prefetch_result = Queue.new
+    end
+
     def run(options, err, out)
-      while !@prefetched
-        sleep 0.1
-      end
-      if @prefetch_out
-        @prefetch_out.rewind
-        out.print @prefetch_out.read
-      end
-      if @prefetch_err
-        @prefetch_err.rewind
-        err.print @prefetch_err.read
-      end
+      p_out, p_err = @prefetch_result.pop
+      out.print(p_out)
+      err.print(p_err)
 
       call_before_run(err, out)
       RSpec::Core::Runner.disable_autorun!
@@ -106,17 +103,15 @@ module PrefetchRspec
     end
 
     def call_prefetch
+      out, err = StringIO.new, StringIO.new
       if @prefetch
         timewatch('prefetch') do
-          @prefetch_err = StringIO.new
-          @prefetch_out = StringIO.new
-            replace_io_execute(@prefetch_err, @prefetch_out, 'prefetch') {
-              @prefetch.call
-            }
-          @prefetch_err.rewind
+          replace_io_execute(err, out, 'prefetch') {
+            @prefetch.call
+          }
         end
       end
-      @prefetched = true
+      @prefetch_result.push([out.string, err.string])
     end
 
     def replace_io_execute(err, out, catch_fail)

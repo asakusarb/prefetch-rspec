@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'stringio'
 
+Thread.abort_on_exception = true
+
 describe PrefetchRspec do
   describe PrefetchRspec::Base do
     describe "optparse" do
@@ -144,6 +146,7 @@ describe PrefetchRspec do
         hooks.should_receive('prefetch')
         hooks.should_receive('before_run')
         hooks.should_not_receive('after_run')
+
         server.prefetch { hooks.prefetch }
         server.before_run { hooks.before_run }
         @after_run_run = true
