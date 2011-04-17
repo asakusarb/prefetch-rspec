@@ -72,11 +72,10 @@ module PrefetchRspec
       RSpec::Core::Runner.disable_autorun!
       result = replace_io_execute(err, out, nil) { RSpec::Core::Runner.run(options, err, out) }
       call_after_run(err, out)
-      Thread.new { 
-        sleep 0.01
-        stop_service!
-      }
+
       result
+    ensure
+      stop_service!
     end
 
     def stop_service!
