@@ -31,7 +31,7 @@ module PrefetchRspec
         run_callback('after_run', err, out)
         @result[1].write(YAML.dump(result))
 
-        exit
+        exit!
       }
     end
 
@@ -47,7 +47,7 @@ module PrefetchRspec
       running!(false)
       [@out[1], @err[1], @result[1]].each(&:close)
 
-      result = YAML.load(@result[0].read)
+      result = YAML.load(@result[0].readpartial(4096))
       return result
     end
 
