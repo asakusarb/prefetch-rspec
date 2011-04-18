@@ -1,5 +1,6 @@
 require 'stringio'
 require 'prefetch_rspec'
+require 'prefetch_rspec/worker'
 
 module PrefetchRspec
   class Server < Base
@@ -24,7 +25,7 @@ module PrefetchRspec
           force_exit!
         }
       end
-      
+
       sigint_first_called = false
       Signal.trap(:INT) {
         if sigint_first_called
@@ -32,7 +33,7 @@ module PrefetchRspec
         else
           sigint_first_called = true
           warn " reloding... [Ctrl-C quick press shoudown]"
-          Thread.new { 
+          Thread.new {
             sleep 1.5
             exit
           }
@@ -57,23 +58,28 @@ module PrefetchRspec
 
     def initialize(*args)
       super
-      @prefetch_result = Queue.new
-      @callbacks = {}
+      @worker = Worker.new
     end
 
     def run(options, err, out)
-      pre_out, pre_err = @prefetch_result.pop
-      out.print(pre_out)
-      err.print(pre_err)
-
-      run_callback('before_run', err, out)
-      RSpec::Core::Runner.disable_autorun!
-      result = replace_io_execute(err, out, nil) { RSpec::Core::Runner.run(options, err, out) }
-      run_callback('after_run', err, out)
-
-      result
+      @worker.work(options, err, out)
     ensure
       stop_service!
+    end
+
+    def listen
+      ENV['PRSPEC'] = 'true'
+      detect_load_config
+
+      begin
+        @drb_service = DRb.start_service(drb_uri, self)
+      rescue DRb::DRbConnError => e
+        cwarn("client connection abort", 31)
+        @drb_service.stop_service
+        exit 1
+      end
+      @worker.launch
+      @drb_service.thread.join
     end
 
     def stop_service!
@@ -84,59 +90,17 @@ module PrefetchRspec
       end
     end
 
+    # comatibility
     def prefetch(&block)
-      @prefetch = block
+      @worker.prefetch = block
     end
 
     def before_run(&block)
-      @callbacks[:before_run] = block
+      @worker.callbacks[:before_run] = block
     end
 
     def after_run(&block)
-      @callbacks[:after_run] = block
-    end
-
-    def timewatch(name)
-      now = Time.now.to_f
-      cwarn("#{name}: start", 35)
-      yield
-      cwarn("#{name}: finished (%.3f sec)" % (Time.now.to_f - now), 35)
-    end
-
-    def call_prefetch
-      out, err = StringIO.new, StringIO.new
-      if @prefetch
-        timewatch('prefetch') do
-          replace_io_execute(err, out, 'prefetch', &@prefetch)
-        end
-      end
-      @prefetch_result.push([out.string, err.string])
-    end
-
-    def replace_io_execute(err, out, catch_fail)
-      orig_out = $stdout
-      orig_err = $stderr
-      begin
-        $stdout = out
-        $stderr = err
-        return(yield)
-      rescue Exception => exception
-        if catch_fail
-          err.puts color("hook #{catch_fail} raise error: #{exception}", 31)
-          err.puts color(exception.backtrace.map {|l| "  " + l}.join("\n"), 37)
-        end
-      ensure
-        $stdout = orig_out
-        $stderr = orig_err
-      end
-    end
-
-    def run_callback(callback, err, out)
-      if block = @callbacks[callback.to_sym]
-        timewatch(callback.to_s) do
-          replace_io_execute(err, out, callback.to_s) { block.call }
-        end
-      end
+      @worker.callbacks[:after_run] = block
     end
 
     def load_config_prspecd
@@ -171,21 +135,6 @@ module PrefetchRspec
       else
         load_config(Pathname.new(Dir.pwd).join('.prspecd'))
       end
-    end
-
-    def listen
-      ENV['PRSPEC'] = 'true'
-      detect_load_config
-
-      begin
-        @drb_service = DRb.start_service(drb_uri, self)
-      rescue DRb::DRbConnError => e
-        cwarn("client connection abort", 31)
-        @drb_service.stop_service
-        exit 1
-      end
-      call_prefetch
-      @drb_service.thread.join
     end
   end
 end

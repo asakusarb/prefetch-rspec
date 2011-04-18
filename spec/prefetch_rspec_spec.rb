@@ -44,6 +44,7 @@ describe PrefetchRspec do
 
   describe PrefetchRspec do
     before(:each) do
+      PrefetchRspec.stub!(:cwarn)
       RSpec::Mocks::setup(RSpec::Core::Runner)
       RSpec::Core::Runner.stub!(:run).and_return {|args, err, out| 
         if args.first.kind_of? Proc

@@ -5,23 +5,25 @@ module PrefetchRspec
   autoload 'Runner', 'prefetch_rspec/runner'
   autoload 'Server', 'prefetch_rspec/server'
 
+  def cwarn(str, col = 37)
+    warn color(str, col)
+  end
+
+  def color(str, col = 37)
+    if STDOUT.tty?
+      "\033[1;#{col}m%s\033[0m" % str
+    else
+      str
+    end
+  end
+  extend self
+
   class Base
+    include PrefetchRspec
     attr_reader :options
 
     def initialize(args)
       optparse(args.to_a)
-    end
-
-    def cwarn(str, col = 37)
-      warn color(str, col)
-    end
-
-    def color(str, col = 37)
-      if STDOUT.tty?
-        "\033[1;#{col}m%s\033[0m" % str
-      else
-        str
-      end
     end
 
     def drb_uri
