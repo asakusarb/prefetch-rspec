@@ -3,11 +3,15 @@ require 'thread'
 module PrefetchRspec
   class Worker
     attr_reader :callbacks
-    attr_writer :prefetch
+    attr_writer :prefetch, :main
 
     def initialize
       @prefetch_result = SizedQueue.new(1)
       @callbacks = {}
+      @main = lambda do |args, err, out|
+        RSpec::Core::Runner.disable_autorun!
+        RSpec::Core::Runner.run(args, err, out)
+      end
     end
 
     def running!(bool = true)
@@ -22,12 +26,13 @@ module PrefetchRspec
 
       @pid = Process.fork {
         out, err = @out[1], @err[1]
+        [out, err].each{|o| def o.tty?; true; end } # XXX
         _run('prefetch', @prefetch, err, out)
 
         args = YAML.load(@command[0].readpartial(1024 * 10))
 
         run_callback('before_run', err, out)
-        result = replace_io_execute(err, out, nil) { process(args, err, out) }
+        result = replace_io_execute(err, out, nil) { run(args, err, out) }
         run_callback('after_run', err, out)
         @result[1].write(YAML.dump(result))
 
@@ -60,10 +65,8 @@ module PrefetchRspec
     end
 
     private
-    def process(args, err, out)
-      p args
-      RSpec::Core::Runner.disable_autorun!
-      RSpec::Core::Runner.run(args, err, out)
+    def run(args, err, out)
+      @main.call(args, err, out)
     end
 
     def run_prefetch

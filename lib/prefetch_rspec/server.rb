@@ -70,10 +70,10 @@ module PrefetchRspec
     def listen
       ENV['PRSPEC'] = 'true'
       detect_load_config
+      @drb_service = DRb.start_service(drb_uri, self)
 
       begin
         @worker.launch
-        @drb_service = DRb.start_service(drb_uri, self)
       rescue DRb::DRbConnError => e
         cwarn("client connection abort", 31)
         @drb_service.stop_service
