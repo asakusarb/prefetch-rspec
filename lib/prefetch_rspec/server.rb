@@ -116,11 +116,10 @@ module PrefetchRspec
     def replace_io_execute(err, out, catch_fail)
       orig_out = $stdout
       orig_err = $stderr
-      result = nil
       begin
         $stdout = out
         $stderr = err
-        result = yield
+        return(yield)
       rescue Exception => exception
         if catch_fail
           err.puts color("hook #{catch_fail} raise error: #{exception}", 31)
@@ -130,7 +129,6 @@ module PrefetchRspec
         $stdout = orig_out
         $stderr = orig_err
       end
-      result
     end
 
     def run_callback(callback, err, out)
