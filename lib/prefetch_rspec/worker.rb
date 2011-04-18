@@ -59,17 +59,13 @@ module PrefetchRspec
       end
     end
 
-    def timewatch(name)
-      now = Time.now.to_f
-      PrefetchRspec.cwarn("#{name}: start", 35)
-      yield
-      PrefetchRspec.cwarn("#{name}: finished (%.3f sec)" % (Time.now.to_f - now), 35)
-    end
-
-    def _run(label, block, err, out)
+    def _run(name, block, err, out)
       return if block.nil?
 
-      timewatch(label.to_s) { replace_io_execute(err, out, label.to_s, &block) }
+      now = Time.now.to_f
+      PrefetchRspec.cwarn("#{name}: start", 35)
+      replace_io_execute(err, out, name, &block)
+      PrefetchRspec.cwarn("#{name}: finished (%.3f sec)" % (Time.now.to_f - now), 35)
     end
   end
 end
