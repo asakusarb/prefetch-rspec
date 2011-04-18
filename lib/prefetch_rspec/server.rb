@@ -61,14 +61,14 @@ module PrefetchRspec
     end
 
     def run(options, err, out)
-      p_out, p_err = @prefetch_result.pop
-      out.print(p_out)
-      err.print(p_err)
+      pre_out, pre_err = @prefetch_result.pop
+      out.print(pre_out)
+      err.print(pre_err)
 
-      call_before_run(err, out)
+      run_callback('before_run', err, out)
       RSpec::Core::Runner.disable_autorun!
       result = replace_io_execute(err, out, nil) { RSpec::Core::Runner.run(options, err, out) }
-      call_after_run(err, out)
+      run_callback('after_run', err, out)
 
       result
     ensure
@@ -106,9 +106,7 @@ module PrefetchRspec
       out, err = StringIO.new, StringIO.new
       if @prefetch
         timewatch('prefetch') do
-          replace_io_execute(err, out, 'prefetch') {
-            @prefetch.call
-          }
+          replace_io_execute(err, out, 'prefetch', &@prefetch)
         end
       end
       @prefetch_result.push([out.string, err.string])
@@ -134,18 +132,10 @@ module PrefetchRspec
       result
     end
 
-    def call_before_run(err, out)
-      if @before_run
-        timewatch('before_run') do
-          replace_io_execute(err, out, 'before_run') { @before_run.call }
-        end
-      end
-    end
-
-    def call_after_run(err, out)
-      if @after_run
-        timewatch('after_run') do
-          replace_io_execute(err, out, 'after_run') { @after_run.call }
+    def run_callback(callback, err, out)
+      if block = instance_variable_get("@#{callback}")
+        timewatch(callback.to_s) do
+          replace_io_execute(err, out, callback.to_s) { block.call }
         end
       end
     end
