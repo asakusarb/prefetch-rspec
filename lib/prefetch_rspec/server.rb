@@ -58,6 +58,7 @@ module PrefetchRspec
     def initialize(*args)
       super
       @prefetch_result = Queue.new
+      @callbacks = {}
     end
 
     def run(options, err, out)
@@ -88,11 +89,11 @@ module PrefetchRspec
     end
 
     def before_run(&block)
-      @before_run = block
+      @callbacks[:before_run] = block
     end
 
     def after_run(&block)
-      @after_run = block
+      @callbacks[:after_run] = block
     end
 
     def timewatch(name)
@@ -133,7 +134,7 @@ module PrefetchRspec
     end
 
     def run_callback(callback, err, out)
-      if block = instance_variable_get("@#{callback}")
+      if block = @callbacks[callback.to_sym]
         timewatch(callback.to_s) do
           replace_io_execute(err, out, callback.to_s) { block.call }
         end
