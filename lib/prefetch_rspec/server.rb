@@ -84,6 +84,7 @@ module PrefetchRspec
 
     def stop_service!
       if @drb_service
+        @worker.shutdown if @worker
         @drb_service.stop_service
       else
         false
