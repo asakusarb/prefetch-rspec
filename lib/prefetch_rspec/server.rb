@@ -165,7 +165,7 @@ module PrefetchRspec
     def detect_load_config
       require 'pathname'
       if options[:rails]
-        load_config Pathname.new(File.expand_path(__FILE__)).parent.parent.join('examples/rails.prspecd')
+        load_config Pathname.new(File.expand_path(__FILE__)).parent.parent.parent.join('examples/rails.prspecd')
       elsif options[:args].first
         load_config Pathname.new(Dir.pwd).join(options[:args].first)
       else
