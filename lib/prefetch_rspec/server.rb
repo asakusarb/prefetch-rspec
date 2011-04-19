@@ -1,6 +1,6 @@
 require 'stringio'
 require 'prefetch_rspec'
-require 'prefetch_rspec/worker'
+require 'prefetch_rspec/worker_spawner'
 
 module PrefetchRspec
   class Server < Base
@@ -60,11 +60,11 @@ module PrefetchRspec
 
     def initialize(*args)
       super
-      @worker = Worker.new
+      @spawner = WorkerSpawner.new
     end
 
     def run(options, err, out)
-      @worker.work(options, err, out)
+      @spawner.dispatch(options, err, out)
     ensure
       stop_service!
     end
@@ -75,7 +75,7 @@ module PrefetchRspec
       @drb_service = DRb.start_service(drb_uri, self)
 
       begin
-        @worker.launch
+        @spawner.spawn
       rescue DRb::DRbConnError => e
         cwarn("client connection abort", 31)
         @drb_service.stop_service
@@ -86,7 +86,7 @@ module PrefetchRspec
 
     def stop_service!
       if @drb_service
-        @worker.shutdown if @worker
+        @spawner.shutdown if @spawner
         @drb_service.stop_service
       else
         false
@@ -95,15 +95,15 @@ module PrefetchRspec
 
     # comatibility
     def prefetch(&block)
-      @worker.prefetch = block
+      Worker.prefetch = block
     end
 
     def before_run(&block)
-      @worker.callbacks[:before_run] = block
+      Worker.callbacks[:before_run] = block
     end
 
     def after_run(&block)
-      @worker.callbacks[:after_run] = block
+      Worker.callbacks[:after_run] = block
     end
 
     def load_config_prspecd

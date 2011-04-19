@@ -1,84 +1,36 @@
-require 'thread'
+require 'active_support/core_ext/class/attribute_accessors'
 
 module PrefetchRspec
   class Worker
-    attr_reader :callbacks
-    attr_writer :prefetch, :main
-
-    def initialize
-      @prefetch_result = SizedQueue.new(1)
-      @callbacks = {}
-      @main = lambda do |args, err, out|
-        RSpec::Core::Runner.disable_autorun!
-        RSpec::Core::Runner.run(args, err, out)
-      end
+    cattr_accessor :prefetch, :main, :callbacks
+    self.callbacks = {}
+    self.main = lambda do |args, err, out|
+      RSpec::Core::Runner.disable_autorun!
+      RSpec::Core::Runner.run(args, err, out)
     end
 
-    def running!(bool = true)
-      @running = bool
+    attr_reader :out, :err
+
+    def initialize(command_input, command_output, stdout, stderr)
+      @command = command_input
+      @result  = command_output
+      @out, @err = [stdout, stderr].each{|io| def io.tty?; true; end }
     end
 
-    def launch
-      @command = IO.pipe
-      @result = IO.pipe
-      @out, @err = IO.pipe, IO.pipe
-      running!
+    def run
+      _run('prefetch', prefetch, err, out)
 
-      @pid = Process.fork {
-        $worker = true
-        out, err = @out[1], @err[1]
-        [out, err].each{|o| def o.tty?; true; end } # XXX
-        _run('prefetch', @prefetch, err, out)
+      args = YAML.load(@command.readpartial(1024 * 10))
 
-        args = YAML.load(@command[0].readpartial(1024 * 10))
-
-        run_callback('before_run', err, out)
-        result = replace_io_execute(err, out, nil) { run(args, err, out) }
-        run_callback('after_run', err, out)
-        @result[1].write(YAML.dump(result))
-
-        exit!
-      }
-    end
-
-    def work(options, err, out)
-      @output_threads = [
-        Thread.new{ out.print @out[0].read_nonblock(4096) until @out[0].eof? },
-        Thread.new{ err.print @err[0].read_nonblock(4096) until @err[0].eof? },
-      ]
-
-      @command[1].write(YAML.dump(options))
-      Process.wait(@pid)
-
-      running!(false)
-      [@out[1], @err[1], @result[1]].each(&:close)
-
-      result = YAML.load(@result[0].readpartial(4096))
-      return result
-    end
-
-    def shutdown
-      if @running
-        Process.kill('TERM', @pid)
-        @output_threads.each(&:kill) if @output_threads
-      end
-      true
+      run_callback('before_run', err, out)
+      result = replace_io_execute(err, out, nil) { main.call(args, err, out) }
+      run_callback('after_run', err, out)
+      @result.write(YAML.dump(result))
     end
 
     private
-    def run(args, err, out)
-      @main.call(args, err, out)
-    end
-
-    def run_prefetch
-      out, err = StringIO.new, StringIO.new
-      _run('prefetch', @prefetch, err, out)
-
-      @prefetch_result.push([out.string, err.string])
-    end
-
     def run_callback(callback, err, out)
-      _run(callback, @callbacks[callback.to_sym], err, out)
+      _run(callback, callbacks[callback.to_sym], err, out)
     end
 
     def _run(name, block, err, out)
