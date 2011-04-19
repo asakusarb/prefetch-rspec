@@ -28,7 +28,7 @@ module PrefetchRspec
 
       sigint_first_called = false
       Signal.trap(:INT) {
-        if sigint_first_called
+        if(sigint_first_called || $worker)
           force_exit!
         else
           sigint_first_called = true
@@ -41,12 +41,14 @@ module PrefetchRspec
       }
 
       at_exit {
-        if @@force_exit
-          server.cwarn("shutdown: ...")
-        else
-          server.cwarn("")
-          server.cwarn("self restart: " + [script, args.to_a].flatten.join(' '))
-          exec(script, *args.to_a)
+        unless $worker
+          if @@force_exit
+            server.cwarn("shutdown: ...")
+          else
+            server.cwarn("")
+            server.cwarn("self restart: " + [script, args.to_a].flatten.join(' '))
+            exec(script, *args.to_a)
+          end
         end
       }
     end

@@ -25,6 +25,7 @@ module PrefetchRspec
       running!
 
       @pid = Process.fork {
+        $worker = true
         out, err = @out[1], @err[1]
         [out, err].each{|o| def o.tty?; true; end } # XXX
         _run('prefetch', @prefetch, err, out)
