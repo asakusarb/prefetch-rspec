@@ -23,7 +23,7 @@ module PrefetchRspec
     end
 
     def drb_uri
-      drb_uri = "druby://127.0.0.1:#{options[:port] || DEFAULT_PORT }"
+      "druby://127.0.0.1:#{options[:port] || DEFAULT_PORT }"
     end
 
     private
