@@ -18,7 +18,7 @@ prefetch {
 }
 
 before_run {
-  ActionDispatch::Callbacks.new(Proc.new {}, nil).call({})
+  ActionDispatch::Callbacks.new(Proc.new {}).call({})
   Rails.application.config.cache_classes = true
   ActiveSupport::Dependencies.mechanism = :require
   require Rails.root + 'spec/spec_helper'
