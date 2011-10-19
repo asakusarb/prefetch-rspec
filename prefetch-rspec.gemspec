@@ -5,25 +5,27 @@
 
 Gem::Specification.new do |s|
   s.name = %q{prefetch-rspec}
-  s.version = "0.1.4"
+  s.version = "0.1.5"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Yuichi Tateno"]
-  s.date = %q{2011-04-12}
+  s.authors = [%q{Yuichi Tateno}]
+  s.date = %q{2011-10-19}
   s.description = %q{ }
   s.email = %q{hotchpotch@gmail.com}
-  s.executables = ["prspecd", "prspec"]
+  s.executables = [%q{prspec}, %q{prspecd}]
   s.extra_rdoc_files = [
     "LICENSE.txt",
-    "README.rdoc"
+    "README.md"
   ]
   s.files = [
     ".document",
     ".gemtest",
     ".rspec",
+    ".travis.yml",
     "Gemfile",
+    "Gemfile.lock",
     "LICENSE.txt",
-    "README.rdoc",
+    "README.md",
     "Rakefile",
     "VERSION",
     "bin/prspec",
@@ -36,17 +38,12 @@ Gem::Specification.new do |s|
     "specs.watchr"
   ]
   s.homepage = %q{http://github.com/asakusarb/prefetch-rspec}
-  s.licenses = ["MIT"]
-  s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
+  s.licenses = [%q{MIT}]
+  s.require_paths = [%q{lib}]
+  s.rubygems_version = %q{1.8.6}
   s.summary = %q{Prefetch initialize phase before run rspec}
-  s.test_files = [
-    "spec/prefetch_rspec_spec.rb",
-    "spec/spec_helper.rb"
-  ]
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
