@@ -4,7 +4,7 @@ Prefetch RSpec is prefetch initialize phase before run rspec.
 
 ## Supported Web Application Framework
 
-* Rails 3.1.x, 3.0.x
+* Rails 3.2.x, 3.1.x, 3.0.x
 
 ## Install
 
